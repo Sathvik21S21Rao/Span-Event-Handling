@@ -17,6 +17,7 @@ object spark_mono_10 {
 
     override def onQueryProgress(event: StreamingQueryListener.QueryProgressEvent): Unit = {
      val p = event.progress
+     val outputRows = p.sink.numOutputRows 
     val batchId = p.batchId
     val numRows = p.numInputRows
     val procTime = p.durationMs.getOrDefault("triggerExecution", 0L)
@@ -29,6 +30,7 @@ object spark_mono_10 {
     println(f"Watermark: $watermark")
     println(f"Input Rows: $numRows")
     println(f"Latency: $procTime ms")
+    println(f"Output Rows: $outputRows")
     println("========================")
  
     }
@@ -66,7 +68,7 @@ object spark_mono_10 {
       StructField("row_id", LongType)
     ))
 
-    val inputPath = "./output_data/mono_signal" 
+    val inputPath = "../output_data/mono_signal" 
 
     val stream = spark.readStream
       .format("csv")
@@ -86,15 +88,17 @@ object spark_mono_10 {
           state.remove()
           Iterator.empty
         } else {
-          val sorted = rows.toList
+          val sorted = rows.toList.sortBy(_.call_start_ts.getTime)
+
           var last = if (state.exists) state.get.last_end else null
           val out = scala.collection.mutable.ListBuffer[Out]()
 
           sorted.foreach { r =>
             if (last != null) {
-              val rawGap = (r.call_start_ts.getTime - last.getTime) / 1000
+              val rawGap = (r.call_start_ts.getTime - last.getTime) 
               val gap = if (rawGap < 0) 0L else rawGap
-              out += Out(caller, last, r.call_start_ts, gap)
+              if( gap!=0)
+                out += Out(caller, last, r.call_start_ts, gap)
             }
             if (last == null || r.call_end_ts.after(last)) {
               last = r.call_end_ts

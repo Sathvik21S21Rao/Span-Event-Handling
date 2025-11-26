@@ -17,7 +17,8 @@ DIRS = {
     "tower": os.path.join(BASE_DIR, "tower_signal"),
     "bi_tower": os.path.join(BASE_DIR, "bi_tower_signal"),
 }
-shutil.rmtree(BASE_DIR)
+if os.path.exists(BASE_DIR):
+    shutil.rmtree(BASE_DIR)
 DISPOSITIONS = ["connected", "busy", "failed", "connected"]
 
 # Global counter to maintain continuous row_ids across different files
@@ -157,7 +158,7 @@ def process_iteration(iteration, throughput, base_time, threshold):
         data["calling_party"] = 9000000000 + get_random(999999900,999999999 )
         data["called_party"] = 9000000000 + get_random(0, 999999999)
         data["imei"] = 100000000 + get_random(0, 9999999)
-        data["unique_id"] = iteration * 1000 + i + 1
+        data["unique_id"] = iteration * MAX_EVENTS + i + 1
         
         raw_records.append(data)
 
@@ -192,7 +193,7 @@ def process_iteration(iteration, throughput, base_time, threshold):
     filename = os.path.join(DIRS["mono"], f"mono_signal_{current_ts_str}.csv")
     with open(filename, 'w', newline='') as f:
         w = csv.writer(f)
-        w.writerow(["unique_id", "start_ts", "end_ts", "caller", "callee", "disposition", "imei", "row_id"])
+        #w.writerow(["unique_id", "start_ts", "end_ts", "caller", "callee", "disposition", "imei", "row_id"])
         for row in batch_data["mono"]:
             w.writerow(row + [global_counters["mono"]])
             global_counters["mono"] += 1
@@ -201,7 +202,7 @@ def process_iteration(iteration, throughput, base_time, threshold):
     filename = os.path.join(DIRS["bi"], f"bi_signal_{current_ts_str}.csv")
     with open(filename, 'w', newline='') as f:
         w = csv.writer(f)
-        w.writerow(["unique_id", "event_type", "caller", "callee", "timestamp", "disposition", "imei", "row_id"])
+        #w.writerow(["unique_id", "event_type", "caller", "callee", "timestamp", "disposition", "imei", "row_id"])
         for row in batch_data["bi"]:
             w.writerow(row + [global_counters["bi"]])
             global_counters["bi"] += 1
@@ -210,7 +211,7 @@ def process_iteration(iteration, throughput, base_time, threshold):
     filename = os.path.join(DIRS["tower"], f"tower_signal_{current_ts_str}.csv")
     with open(filename, 'w', newline='') as f:
         w = csv.writer(f)
-        w.writerow(["unique_id", "tower", "start_ts", "end_ts", "row_id"])
+        #w.writerow(["unique_id", "tower", "start_ts", "end_ts", "row_id"])
         for row in batch_data["tower"]:
             w.writerow(row + [global_counters["tower"]])
             global_counters["tower"] += 1

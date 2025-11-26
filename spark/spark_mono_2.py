@@ -31,11 +31,12 @@ class MonitorListener(StreamingQueryListener):
         print(f"Query Terminated: {event.id}")
 
 if len(sys.argv) != 3:
-    print("Usage: python spark_mono_2.py <files_per_trigger> <watermark_delay>")
+    print("Usage: python spark_mono_2.py <watermark_delay_string> <cores>")
     exit(0)
 
-files_per_trigger = int(sys.argv[1]) 
-watermark_delay = sys.argv[2]
+files_per_trigger = 1
+watermark_delay = sys.argv[1]
+cores = int(sys.argv[2])
 
 call_record_schema = StructType([
     StructField("unique_id", LongType(), True),
@@ -58,15 +59,15 @@ tower_signal_schema = StructType([
 
 spark = SparkSession.builder \
     .appName("TowerCallJoin_EndTS") \
-    .master("local[4]") \
-    .config("spark.sql.shuffle.partitions", 4) \
+    .master(f"local[{cores}]") \
+    .config("spark.sql.shuffle.partitions", cores) \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel("WARN")
 spark.streams.addListener(MonitorListener())
 
-MONO_DIR = "./output_data/mono_signal"
-TOWER_DIR = "./output_data/tower_signal"
+MONO_DIR = "../output_data/mono_signal"
+TOWER_DIR = "../output_data/tower_signal"
 
 stream_calls = spark.readStream \
     .format("csv") \
@@ -102,8 +103,8 @@ def check_overlap(c_start, c_end, t_start, t_end):
 joined_clean = stream_calls.join(
     stream_tower_signals,
     (col("sc.unique_id") == col("sts.unique_id")) & 
-    expr("tower_end_ts >= call_end_ts - interval 1 hour") &
-    expr("tower_end_ts <= call_end_ts + interval 1 hour"),
+    expr(f"tower_end_ts >= call_end_ts - interval {watermark_delay}") &
+    expr(f"tower_end_ts <= call_end_ts + interval {watermark_delay}"),
     "inner"
 )
 

@@ -45,7 +45,8 @@ class MonitorListener extends StreamingQueryListener {
   override def onQueryStarted(event: StreamingQueryListener.QueryStartedEvent): Unit = {}
 
   override def onQueryProgress(event: StreamingQueryListener.QueryProgressEvent): Unit = {
-  val p = event.progress
+    val p = event.progress
+    val outputRows = p.sink.numOutputRows
     val batchId = p.batchId
     val numRows = p.numInputRows
     val procTime = p.durationMs.getOrDefault("triggerExecution", 0L)
@@ -58,8 +59,8 @@ class MonitorListener extends StreamingQueryListener {
     println(f"Watermark: $watermark")
     println(f"Input Rows: $numRows")
     println(f"Latency: $procTime ms")
+    println(f"Output Rows: $outputRows")
     println("========================")
-
   }
 
   override def onQueryTerminated(event: StreamingQueryListener.QueryTerminatedEvent): Unit = {}
@@ -97,8 +98,8 @@ object spark_bi_2 {
 
     import spark.implicits._
 
-    val callDir = "./output_data/bi_signal"
-    val towerDir = "./output_data/bi_tower_signal"
+    val callDir = "../output_data/bi_signal"
+    val towerDir = "../output_data/bi_tower_signal"
     val maxFiles = 1
 
     val callSchema = StructType(Seq(

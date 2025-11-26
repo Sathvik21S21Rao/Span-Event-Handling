@@ -30,6 +30,7 @@ class MonitorListener extends StreamingQueryListener {
 
   override def onQueryProgress(event: StreamingQueryListener.QueryProgressEvent): Unit = {
     val p = event.progress
+    val outputRows = p.sink.numOutputRows
     val batchId = p.batchId
     val numRows = p.numInputRows
     val procTime = p.durationMs.getOrDefault("triggerExecution", 0L)
@@ -42,8 +43,11 @@ class MonitorListener extends StreamingQueryListener {
     println(f"Watermark: $watermark")
     println(f"Input Rows: $numRows")
     println(f"Latency: $procTime ms")
+    println(f"Output Rows: $outputRows")
     println("========================")
+
   }
+
 
   override def onQueryTerminated(event: StreamingQueryListener.QueryTerminatedEvent): Unit = {}
 }
@@ -54,33 +58,6 @@ object spark_bi_10 {
   implicit val stateEncoder: Encoder[State] = Encoders.product[State]
   implicit val outEncoder: Encoder[Out] = Encoders.product[Out]
 
-  def updateState(caller: String, rows: Iterator[Bi], state: GroupState[State]): Iterator[Out] = {
-    if (state.hasTimedOut) {
-      state.remove()
-      Iterator.empty
-    } else {
-      val sorted = rows.toList
-      var last = if (state.exists) state.get.last_end else null
-      val out = scala.collection.mutable.ListBuffer[Out]()
-
-      sorted.foreach { r =>
-        if (r.event_type == 0) { 
-          if (last != null) {
-            val gap = (r.timestamp.getTime - last.getTime) / 1000
-            if (gap >= 0) out += Out(caller, last, r.timestamp, gap)
-          }
-        } else {
-          last = r.timestamp
-        }
-      }
-
-      if (last != null) {
-        state.update(State(last))
-        state.setTimeoutTimestamp(last.getTime + 30L * 60L * 1000L)
-      }
-      out.iterator
-    }
-  }
 
   def main(args: Array[String]): Unit = {
     if (args.length < 2) {
@@ -104,7 +81,7 @@ object spark_bi_10 {
 
     import spark.implicits._
 
-    val biDir = "./output_data/bi_signal"
+    val biDir = "../output_data/bi_signal"
     val maxFiles = 1
 
     val schema = StructType(Seq(
@@ -125,8 +102,6 @@ object spark_bi_10 {
       .option("timestampFormat", "yyyy-MM-dd HH:mm:ss.SSS")
       .option("maxFilesPerTrigger", maxFiles)
       .load(biDir)
-      .withColumnRenamed("timestamp", "ts") 
-      .withColumnRenamed("ts", "timestamp") 
       .withWatermark("timestamp", watermarkDurationString)
       .as[Bi]
 
@@ -137,15 +112,15 @@ object spark_bi_10 {
       state.remove()
       Iterator.empty
     } else {
-      val sorted = rows.toList
+      val sorted = rows.toList.sortBy(_.timestamp.getTime)
       var last = if (state.exists) state.get.last_end else null
       val out = scala.collection.mutable.ListBuffer[Out]()
 
       sorted.foreach { r =>
         if (r.event_type == 0) { 
           if (last != null) {
-            val gap = (r.timestamp.getTime - last.getTime) / 1000
-            if (gap >= 0) out += Out(caller, last, r.timestamp, gap)
+            val gap = (r.timestamp.getTime - last.getTime) 
+            if (gap > 0) out += Out(caller, last, r.timestamp, gap)
           }
         } else {
           last = r.timestamp
