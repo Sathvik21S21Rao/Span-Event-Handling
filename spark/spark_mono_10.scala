@@ -5,7 +5,7 @@ import org.apache.spark.sql.streaming.{GroupState, GroupStateTimeout, OutputMode
 import java.sql.Timestamp
 import java.time.Instant
 
-object Query10Mono {
+object spark_mono_10 {
   case class Call(caller: String, call_start_ts: java.sql.Timestamp, call_end_ts: java.sql.Timestamp)
   case class State(last_end: java.sql.Timestamp)
   case class Out(caller: String, prev_end: java.sql.Timestamp, next_start: java.sql.Timestamp, gap: Long)
@@ -40,14 +40,14 @@ object Query10Mono {
 
   def main(args: Array[String]): Unit = {
     if (args.length < 1) {
-      System.err.println("Usage: Query10Mono <timeout_millis>")
+      System.err.println("Usage: spark_mono_10 <timeout_millis>")
       System.exit(1)
     }
 
     val timeoutMillis = args(0).toLong
     val timeoutDurationString = s"${timeoutMillis} milliseconds"
 
-    val spark = SparkSession.builder.appName("Query10Mono").master("local[4]").getOrCreate()
+    val spark = SparkSession.builder.appName("spark_mono_10").master("local[4]").getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
     import spark.implicits._
 
