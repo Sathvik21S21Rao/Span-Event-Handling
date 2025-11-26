@@ -47,7 +47,7 @@ object spark_mono_10 {
     val timeoutMillis = args(0).toLong
     val timeoutDurationString = s"${timeoutMillis} milliseconds"
 
-    val spark = SparkSession.builder.appName("spark_mono_10").master("local[4]").getOrCreate()
+    val spark = SparkSession.builder.appName("spark_mono_10").master("local[4]").config("spark.sql.shuffle.partitions","4").getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
     import spark.implicits._
 
@@ -85,7 +85,7 @@ object spark_mono_10 {
           state.remove()
           Iterator.empty
         } else {
-          val sorted = rows.toList.sortBy(_.call_end_ts.getTime)
+          val sorted = rows.toList
           var last = if (state.exists) state.get.last_end else null
           val out = scala.collection.mutable.ListBuffer[Out]()
 

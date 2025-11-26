@@ -170,7 +170,7 @@ object spark_bi_2 {
       events: Iterator[TowerEvent],
       state: GroupState[SessionState]
     ): Iterator[TowerSession] = {
-      val sorted = events.toSeq.sortBy(_.tower_ts.getTime)
+      val sorted = events.toSeq
       var st = if (state.exists) state.get else SessionState(None, None)
       var out = Vector.empty[TowerSession]
 

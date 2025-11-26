@@ -59,7 +59,7 @@ object spark_bi_10 {
       state.remove()
       Iterator.empty
     } else {
-      val sorted = rows.toList.sortBy(_.timestamp.getTime)
+      val sorted = rows.toList
       var last = if (state.exists) state.get.last_end else null
       val out = scala.collection.mutable.ListBuffer[Out]()
 
