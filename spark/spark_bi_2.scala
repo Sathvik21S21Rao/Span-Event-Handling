@@ -134,7 +134,7 @@ object spark_bi_2 {
       .option("maxFilesPerTrigger", maxFiles)
       .load(callDir)
       .withColumnRenamed("timestamp", "call_ts")
-      .withWatermark("call_ts", watermarkDelay)
+      .withWatermark("call_ts", watermarkDurationString)
       .as[CallEvent]
 
     val streamTowers = spark.readStream
@@ -145,7 +145,7 @@ object spark_bi_2 {
       .option("maxFilesPerTrigger", maxFiles)
       .load(towerDir)
       .withColumnRenamed("timestamp", "tower_ts")
-      .withWatermark("tower_ts", watermarkDelay)
+      .withWatermark("tower_ts", watermarkDurationString)
       .as[TowerEvent]
 
     def buildCallSessions(

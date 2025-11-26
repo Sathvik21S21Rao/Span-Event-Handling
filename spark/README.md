@@ -67,10 +67,10 @@ The repository contains both Python and Scala examples. Below are step-by-step i
 
 		After building `spark_scala.jar` you can run a chosen main object with `spark-submit --class`.
 
-		```pbash
-		spark-submit --class spark_bi_2 spark_scala.jar
-		spark-submit --class spark_bi_10 spark_scala.jar
-		spark-submit --class spark_mono_10 spark_scala.jar <timeout_millis>
+		```bash
+		spark-submit --class spark_bi_2 spark_scala.jar <watermark_millis> <timeout_millis> <cores>
+		spark-submit --class spark_bi_10 spark_scala.jar <watermark_millis> <timeout_millis> <cores>
+		spark-submit --class spark_mono_10 spark_scala.jar <watermark_millis> <timeout_millis> <cores>
 		```
 
 	- Notes:
