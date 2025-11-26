@@ -83,10 +83,20 @@ object spark_bi_10 {
   }
 
   def main(args: Array[String]): Unit = {
+    if (args.length < 2) {
+      System.err.println("Usage: spark_mono_10 <watermark_milliseconds> <timeout_milliseconds> <cores>")
+      System.exit(1)
+    }
+
+    val watermarkMillis = args(0).toLong
+
+    val watermarkDurationString = s"${watermarkMillis} milliseconds"
+    val timeoutMillis = args(1).toLong
+    val cores = args(2)
     val spark = SparkSession.builder()
       .appName("spark_bi_10")
-      .master("local[4]")
-      .config("spark.sql.shuffle.partitions", "4")
+      .master(s"local[$cores]")
+      .config("spark.sql.shuffle.partitions", cores)
       .getOrCreate()
     
     spark.sparkContext.setLogLevel("WARN")
@@ -95,7 +105,6 @@ object spark_bi_10 {
     import spark.implicits._
 
     val biDir = "./output_data/bi_signal"
-    val watermarkDelay = "10 minutes"
     val maxFiles = 1
 
     val schema = StructType(Seq(
@@ -118,12 +127,38 @@ object spark_bi_10 {
       .load(biDir)
       .withColumnRenamed("timestamp", "ts") 
       .withColumnRenamed("ts", "timestamp") 
-      .withWatermark("timestamp", watermarkDelay)
+      .withWatermark("timestamp", watermarkDurationString)
       .as[Bi]
 
     val result = stream
       .groupByKey(_.caller)
-      .flatMapGroupsWithState(OutputMode.Append, GroupStateTimeout.EventTimeTimeout)(updateState)
+      .flatMapGroupsWithState(OutputMode.Append, GroupStateTimeout.EventTimeTimeout)((caller: String, rows: Iterator[Bi], state: GroupState[State]) => {
+    if (state.hasTimedOut) {
+      state.remove()
+      Iterator.empty
+    } else {
+      val sorted = rows.toList
+      var last = if (state.exists) state.get.last_end else null
+      val out = scala.collection.mutable.ListBuffer[Out]()
+
+      sorted.foreach { r =>
+        if (r.event_type == 0) { 
+          if (last != null) {
+            val gap = (r.timestamp.getTime - last.getTime) / 1000
+            if (gap >= 0) out += Out(caller, last, r.timestamp, gap)
+          }
+        } else {
+          last = r.timestamp
+        }
+      }
+
+      if (last != null) {
+        state.update(State(last))
+        state.setTimeoutTimestamp(last.getTime + timeoutMillis)
+      }
+      out.iterator
+    }
+  })
 
     val query = result.writeStream
       .format("console")

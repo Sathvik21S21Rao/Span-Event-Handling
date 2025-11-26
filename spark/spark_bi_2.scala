@@ -74,11 +74,21 @@ object spark_bi_2 {
   implicit val sessionStateEncoder: Encoder[SessionState] = Encoders.product[SessionState]
 
   def main(args: Array[String]): Unit = {
+    if (args.length < 2) {
+      System.err.println("Usage: spark_mono_10 <watermark_milliseconds> <timeout_milliseconds> <cores>")
+      System.exit(1)
+    }
+
+    val watermarkMillis = args(0).toLong
+    val watermarkDurationString = s"${watermarkMillis} milliseconds"
+    val timeoutMillis = args(1).toLong
+    val timeoutDurationString = s"${timeoutMillis} milliseconds"
+    val cores = args(2)
 
     val spark = SparkSession.builder()
       .appName("spark_bi_2")
-      .master("local[4]")
-      .config("spark.sql.shuffle.partitions", "4")
+      .master(s"local[$cores]")
+      .config("spark.sql.shuffle.partitions", cores)
       .config("spark.sql.streaming.statefulOperator.checkCorrectness.enabled", "false")
       .getOrCreate()
     
@@ -89,7 +99,6 @@ object spark_bi_2 {
 
     val callDir = "./output_data/bi_signal"
     val towerDir = "./output_data/bi_tower_signal"
-    val watermarkDelay = "10 minutes"
     val maxFiles = 1
 
     val callSchema = StructType(Seq(
@@ -209,10 +218,10 @@ object spark_bi_2 {
       .alias("c")
       .join(
         towerSessions.toDF("unique_id", "tower", "tower_start", "tower_end").alias("t"),
-        expr("""
+        expr(s"""
           c.unique_id = t.unique_id AND
-          t.tower_end >= c.call_end - interval 1 hour AND 
-          t.tower_end <= c.call_end + interval 1 hour
+          t.tower_end >= c.call_end - interval $timeoutDurationString AND 
+          t.tower_end <= c.call_end + interval $timeoutDurationString
         """)
       )
       .filter(checkOverlapUDF(col("c.call_start"), col("c.call_end"), col("t.tower_start"), col("t.tower_end")))

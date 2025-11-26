@@ -10,7 +10,6 @@ object spark_mono_10 {
   case class State(last_end: java.sql.Timestamp)
   case class Out(caller: String, prev_end: java.sql.Timestamp, next_start: java.sql.Timestamp, gap: Long)
 
-  // --- Define the Listener ---
   class BatchListener extends StreamingQueryListener {
     override def onQueryStarted(event: StreamingQueryListener.QueryStartedEvent): Unit = {
       println(s"Query started: ${event.id}")
@@ -39,19 +38,21 @@ object spark_mono_10 {
   }
 
   def main(args: Array[String]): Unit = {
-    if (args.length < 1) {
-      System.err.println("Usage: spark_mono_10 <timeout_millis>")
+    if (args.length < 2) {
+      System.err.println("Usage: spark_mono_10 <watermark_milliseconds> <timeout_milliseconds> <cores>")
       System.exit(1)
     }
 
-    val timeoutMillis = args(0).toLong
+    val watermarkMillis = args(0).toLong
+    val watermarkDurationString = s"${watermarkMillis} milliseconds"
+    val timeoutMillis = args(1).toLong
     val timeoutDurationString = s"${timeoutMillis} milliseconds"
+    val cores = args(2)
 
-    val spark = SparkSession.builder.appName("spark_mono_10").master("local[4]").config("spark.sql.shuffle.partitions","4").getOrCreate()
+    val spark = SparkSession.builder.appName("spark_mono_10").master(s"local[$cores]").config("spark.sql.shuffle.partitions", cores).getOrCreate()
     spark.sparkContext.setLogLevel("WARN")
     import spark.implicits._
 
-    // --- Register the Listener ---
     spark.streams.addListener(new BatchListener())
 
     val schema = StructType(Seq(
@@ -76,7 +77,7 @@ object spark_mono_10 {
       .load(inputPath)
       .filter($"disposition" === "connected")
       .select($"caller", $"start_ts".as("call_start_ts"), $"end_ts".as("call_end_ts"))
-      .withWatermark("call_end_ts", timeoutDurationString)
+      .withWatermark("call_end_ts", watermarkDurationString)
       .as[Call]
 
     val result = stream.groupByKey(_.caller).flatMapGroupsWithState(OutputMode.Append, GroupStateTimeout.EventTimeTimeout)(

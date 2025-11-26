@@ -75,8 +75,8 @@ The repository contains both Python and Scala examples. Below are step-by-step i
 
 	- Notes:
 		- `compile_scala.sh` expects `SPARK_HOME` to be set and `scalac`/`jar` available.
-		- If `spark-submit` isn't in PATH, use `& "$env:SPARK_HOME\bin\spark-submit" --class <MainClass> spark_scala.jar` in PowerShell.
+.
 
-If you want, I can also add quick troubleshooting notes (setting `SPARK_HOME`, installing Scala, or running `compile_scala.sh` on Windows). Would you like that?
+
 
 
