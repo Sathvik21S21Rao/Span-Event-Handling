@@ -31,7 +31,7 @@ def table_creations(table_env, watermark_seconds):
         WATERMARK FOR start_timestamp AS start_timestamp - INTERVAL '{watermark_seconds}' SECOND
     ) WITH (
         'connector' = 'filesystem',
-        'path' = '/Users/vishruthvijay/Documents/IIITB-Docs/SEM-7/SDS/project/SpanStreamGenerator/output_data/mono_signal/',
+        'path' = './../output_data/mono_signal/',
         'format' = 'csv',
         'csv.ignore-parse-errors' = 'true'
     );
@@ -54,7 +54,7 @@ def table_creations(table_env, watermark_seconds):
         WATERMARK FOR start_timestamp AS start_timestamp - INTERVAL '{watermark_seconds}' SECOND
     ) WITH (
         'connector' = 'filesystem',
-        'path' = '/Users/vishruthvijay/Documents/IIITB-Docs/SEM-7/SDS/project/SpanStreamGenerator/output_data/tower_signal/',
+        'path' = './../output_data/tower_signal/',
         'format' = 'csv',
         'csv.ignore-parse-errors' = 'true'
     );
@@ -98,8 +98,8 @@ def execute_query(table_env):
         FROM CallRecords c
         JOIN TowerSignals t
         ON c.unique_id = t.unique_id
-        WHERE t.start_timestamp < c.end_timestamp
-            AND t.end_timestamp > c.start_timestamp
+        WHERE t.start_timestamp < c.end_timestamp + INTERVAL '3' SECOND
+            AND t.end_timestamp > c.start_timestamp - INTERVAL '3' SECOND
             AND NOT (t.start_timestamp >= c.start_timestamp AND t.end_timestamp <= c.end_timestamp)
 """
 
