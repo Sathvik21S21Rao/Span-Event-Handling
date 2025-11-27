@@ -2,7 +2,7 @@
 
 DB="testdb"
 USER="postgres"
-export PGPASSWORD="root"
+export PGPASSWORD="password"
 
 psql -U "$USER" -d "$DB" -c "DELETE from mono_signal"
 psql -U "$USER" -d "$DB" -c "DELETE  from tower_signal"
